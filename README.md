@@ -21,3 +21,10 @@ Il nous suffit donc du l'uploader sur le serveur pour avoir accès au serveur. N
 > cat /root/flag.txt
 advens{easy_baby_web}
 ```
+
+
+## Forensic
+
+### Simple HTTP
+Cette épreuve nous met à disposition une capture de trames où 2 machines échanges des données. 
+On suppose que l'une des trame doit contenir un mot de passe ou un flag. En filtrant les trames par protocole, il est facile de repérer un paquet `HTTP/POST`. En inspectant le contenu de cette trame, on trouve rapidement un fichier `flag.txt` encapsulé un paquet `MIME`.  On trouve donc le flag en clair dans cette partie de la trame [screenshot](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/forensic/simpleHTTP/simpleHTTP_1.PNG).
