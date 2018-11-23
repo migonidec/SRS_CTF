@@ -64,9 +64,18 @@ Une fois la faille SQL identifié, nous allons injecter un shell dans le serveur
 	}
 ?>
 
-> sqlmap -u http://blogdemichel.hackdumb.com/?page=blog\&id=1 --file-dest="../../../../../../tmp/simpleShell.php" --file-write="/root/simpleShell.php"
-``` 
-Grâce à ce webshell on peux interagir avec le serveur et localiser le flag dans `/home/michel`. A noter qu'on utilise l’exécutable `getflag` qui peut être exécuté par tout les utilisateurs.
+> sqlmap -u http://blogdemichel.hackdumb.com/?page=blog\&id=1 --file-write="/root/simpleShell.php"--file-dest="../../../../../../tmp/simpleShell.php" 
+```
+Cette dernière commande `sqlmap` permet d'injecter un fichier local sur le serveur. L'injection de `simpleShell.php` est réalisée dans le dossier `/tmp` afin de ne pas requérir de droit spéciaux. Afin d'atteindre ce dossier on remonte l’arborescence grâce aux multiples `..`.
+Grâce à ce webshell on peux interagir avec le serveur et localiser le flag dans `/home/michel`. A noter qu'on utilise l’exécutable `getflag` qui peut être exécuté par tout les utilisateurs. [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/blogMichel/blogMichel_5.PNG).
+
+### Mr President
+Ce dernier challenge web présente un formulaire qui permet d'afficher du texte sur une autre page web. En injectant un contenu sous la forme `{{...}}`, on remarque que le contenu est exécuté par le serveur web [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/mrPresident/mrPresident_1.PNG).
+En suivant une documentation fournie par [CTFtime](https://ctftime.org/task/6579), on arrive à déduire que l'application est écrite en python et à réaliser une injection pour exécuter des commandes [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/mrPresident/mrPresident_2.PNG).
+```
+{{url_for.__globals__.os.__dict__.popen(/*commande*/).read()}}
+```
+On fouillant sur le serveur, on finit par découvrir un executable `runme` qui permet à tous les utilisateurs de lire un fichier `flag` [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/mrPresident/mrPresident_3.PNG).
 
 ## Forensic
 
